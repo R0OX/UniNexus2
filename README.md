@@ -1,6 +1,6 @@
-# uninexus2
+# uninexus
 
-UniNexus transforms university life by merging key campus functions into one platform. It enables secure e-IDs for access control, automates attendance, streamlines lab issue reporting, and offers real-time lab availability — fostering efficiency, communication, and a safer connected campus.
+A new Flutter project.
 
 ## Getting Started
 

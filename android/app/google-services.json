@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1090632603312",
+    "project_id": "uninexus-1aea7",
+    "storage_bucket": "uninexus-1aea7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090632603312:android:18a099181ebe08c632cd75",
+        "android_client_info": {
+          "package_name": "com.example.uninexus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDs8S4CXKNWEnfnUGj1_3FTPQXWzgV9fPs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uninexus/ui/screens/profile_screen.dart';
+import 'attendance_session_screen.dart';
 import 'faculty_id_screen.dart'; // Import the ID screen
+import 'halls_screen.dart';
 import 'qa_screen.dart';        // Import the Q&A screen
 
 class FacultyHomeScreen extends StatefulWidget {
@@ -268,7 +270,12 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                       child: _buildActionCard(
                         title: "Halls",
                         iconPath: 'assets/images/main_calender.png',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HallsScreen()),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -276,7 +283,13 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                       child: _buildActionCard(
                         title: "Attendance",
                         iconPath: 'assets/images/tasks.png',
-                        onTap: () {},
+                        onTap: () {
+                          // --- NAVIGATE TO ATTENDANCE SESSION SCREEN ---
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AttendanceSessionScreen()),
+                          );
+                        },
                       ),
                     ),
                   ],

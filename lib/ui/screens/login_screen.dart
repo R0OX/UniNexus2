@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // REQUIRED
 import 'package:uninexus/ui/screens/SignUp_Screen.dart';
 import '../../ui/screens/ForgetPassword_Screen.dart';
 import 'dashboard_screen.dart';
+import 'faculty_home_screen.dart';
 import 'stu_home.dart';
 import '../../services/firebase/login_service.dart';
 
@@ -51,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (rememberMe && userCode != null && mounted) {
       // If remembered, navigate immediately
-      _navigateToScreen(userCode);
+      _navigateToScreen(userCode, firstName: '', lastName: '');
     } else {
       setState(() {
         _isLoading = false; // Allow user to interact with the form
@@ -68,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Consolidated navigation logic
-  void _navigateToScreen(String code) {
+  void _navigateToScreen(String code, {String? firstName, String? lastName}) async {
     if (!mounted) return;
 
     if (_isStudentPrefix(code)) {
@@ -76,7 +77,30 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => const StuHomeScreen()),
       );
-    } else {
+    }
+    else if (_isFacultyPrefix(code)) {
+
+      String fName = firstName ?? "Faculty";
+      String lName = lastName ?? "";
+
+      // If names weren't passed (e.g., during auto-login), try loading from storage
+      if (firstName == null) {
+        final prefs = await SharedPreferences.getInstance();
+        fName = prefs.getString(_kUserFirstNameKey) ?? "Faculty";
+        lName = prefs.getString(_kUserLastNameKey) ?? "";
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FacultyHomeScreen(
+            firstName: fName,
+            lastName: lName,
+          ),
+        ),
+      );
+    }
+    else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const DashboardScreen()),
@@ -84,11 +108,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Only returns true for the 'ST' prefix
   bool _isStudentPrefix(String code) {
     if (code.length < 2) return false;
-    final prefix = code.substring(0, 2).toUpperCase();
-    return prefix == 'ST';
+    return code.substring(0, 2).toUpperCase() == 'ST';
+  }
+
+  // NEW HELPER FUNCTION
+  bool _isFacultyPrefix(String code) {
+    if (code.length < 2) return false;
+    return code.substring(0, 2).toUpperCase() == 'FA';
   }
 
   // Function to save user data (UPDATED)
@@ -128,17 +156,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (status == LoginResult.success) {
 
-      // *** ASSUMPTION: LoginService returns 'firstName' and 'lastName' on success
-      final firstName = result['firstName'] as String? ?? 'User';
+      // 1. Get the names directly from the database result
+      final firstName = result['firstName'] as String? ?? 'Faculty';
       final lastName = result['lastName'] as String? ?? '';
 
-      // Success: Save preferences based on checkbox state
-      await _saveLoginData(code, firstName, lastName); // <<< PASS NAMES TO SAVE
+      // 2. Save them (only if Remember Me is checked)
+      await _saveLoginData(code, firstName, lastName);
 
-      // Navigate based on prefix
-      _navigateToScreen(code);
+      // 3. Pass them directly to the navigation function
+      _navigateToScreen(code, firstName: firstName, lastName: lastName);
 
-    } else {
+    }else {
       // Failure: Show appropriate error
       String msg;
       switch (status) {

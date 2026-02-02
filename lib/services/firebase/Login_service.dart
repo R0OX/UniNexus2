@@ -1,5 +1,3 @@
-// Login_service.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../model/student_model.dart';
 import '../../model/faculty_model.dart';
@@ -15,7 +13,7 @@ enum LoginResult {
   error
 }
 
-// Model for a successful login
+// Model for a successful login to pass around the app
 class AuthData {
   final dynamic user;
   final UserType type;
@@ -79,23 +77,25 @@ class LoginService {
       }
 
       final docData = querySnapshot.docs.first.data();
-      // Use the corrected Student model for safe data access and parsing
       final student = Student.fromJson(docData);
 
-      // 1. Verify Password: Use the password from the parsed model
+      // 1. Verify Password
       if (student.pass == password) {
 
         // 2. CHECK: Is the 'app' field true?
         if (student.app == true) {
           return {
             'status': LoginResult.success,
+            // SEND NAMES for SharedPrefs
+            'firstName': student.fName,
+            'lastName': student.lName,
+            // KEEP AUTH DATA for App State
             'data': AuthData(
               user: student,
               type: UserType.student,
             ),
           };
         } else {
-          // If 'app' is false, they must sign up first
           return {'status': LoginResult.signUpRequired};
         }
 
@@ -109,7 +109,7 @@ class LoginService {
   }
 
   // -------------------------------------------------------------------
-  // --- Specific Login Function for Faculty (Corrected Parsing) ---
+  // --- Specific Login Function for Faculty ---
   // -------------------------------------------------------------------
   Future<Map<String, dynamic>> _loginFaculty(String code, String password) async {
     try {
@@ -124,15 +124,18 @@ class LoginService {
       }
 
       final docData = querySnapshot.docs.first.data();
-      // NEW: Parse the Faculty model immediately for robust password check
       final faculty = Faculty.fromJson(docData);
 
-      // 1. Verify Password: Use the password from the parsed model
+      // 1. Verify Password
       if (faculty.pass == password) {
         return {
           'status': LoginResult.success,
+          // SEND NAMES for SharedPrefs
+          'firstName': faculty.fName,
+          'lastName': faculty.lName,
+          // KEEP AUTH DATA for App State
           'data': AuthData(
-            user: faculty, // Return the parsed object
+            user: faculty,
             type: UserType.faculty,
           ),
         };
@@ -146,7 +149,7 @@ class LoginService {
   }
 
   // -------------------------------------------------------------------
-  // --- Specific Login Function for Staff (Corrected Parsing) ---
+  // --- Specific Login Function for Staff ---
   // -------------------------------------------------------------------
   Future<Map<String, dynamic>> _loginStaff(String code, String password) async {
     try {
@@ -161,15 +164,18 @@ class LoginService {
       }
 
       final docData = querySnapshot.docs.first.data();
-      // NEW: Parse the Staff model immediately for robust password check
       final staff = Staff.fromJson(docData);
 
-      // 1. Verify Password: Use the password from the parsed model
+      // 1. Verify Password
       if (staff.pass == password) {
         return {
           'status': LoginResult.success,
+          // SEND NAMES for SharedPrefs
+          'firstName': staff.fName,
+          'lastName': staff.lName,
+          // KEEP AUTH DATA for App State
           'data': AuthData(
-            user: staff, // Return the parsed object
+            user: staff,
             type: UserType.staff,
           ),
         };

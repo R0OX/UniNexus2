@@ -1,6 +1,7 @@
 class Faculty {
   final String id;
   final String fName;
+  final String faculty;
   final String lName;
   final String pNum;
   final String email;
@@ -13,6 +14,7 @@ class Faculty {
   Faculty({
     required this.id,
     required this.fName,
+    required this.faculty,
     required this.lName,
     required this.pNum,
     required this.email,
@@ -48,6 +50,7 @@ class Faculty {
     return Faculty(
       id: json['ID'] ?? '',
       fName: json['fName'] ?? '',
+      faculty: json['faculty'] ?? '',
       lName: json['lName'] ?? '',
       pNum: json['pNum'] ?? '',
       email: json['email'] ?? '',
@@ -66,6 +69,7 @@ class Faculty {
     return {
       'ID': id,
       'fName': fName,
+      'faculty': faculty,
       'lName': lName,
       'pNum': pNum,
       'email': email,

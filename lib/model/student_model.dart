@@ -4,9 +4,9 @@ class Student {
   final String id;
   final String fName;
   final String lName;
-  final int year;
+  final String year;
   final String faculty;
-  final int section;  // CORRECTED to int (was String)
+  final String section;  // CORRECTED to int (was String)
   final String pNum;
   final String photo;
   final String email;
@@ -40,9 +40,9 @@ class Student {
       id: json['ID'] ?? '',
       fName: json['fName'] ?? '',
       lName: json['lName'] ?? '',
-      year: safeParseInt(json['year']),
+      year: (json['year']),
       faculty: json['faculty'] ?? '',
-      section: safeParseInt(json['section']),
+      section: (json['section']),
       pNum: json['pNum'] ?? '',
       photo: json['photo'] ?? '',
       email: json['email'] ?? '',

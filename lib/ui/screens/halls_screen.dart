@@ -74,8 +74,6 @@ class _HallsScreenState extends State<HallsScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => FacultyIDScreen(
-            userID: userID,
-            userName: "$fName $lName",
           ),
         ),
       );

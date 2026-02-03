@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../ui/screens/login_screen.dart';
 import '../../ui/screens/SignUp_Screen.dart';
 
-class StaffWelcomeScreen extends StatelessWidget {
-  const StaffWelcomeScreen({Key? key}) : super(key: key);
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

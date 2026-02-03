@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class FacultyIDScreen extends StatefulWidget {
-  const FacultyIDScreen({super.key});
+class StudentIDScreen extends StatefulWidget {
+  const StudentIDScreen({super.key});
 
   @override
-  State<FacultyIDScreen> createState() => _FacultyIDScreenState();
+  State<StudentIDScreen> createState() => _StudentIDScreenState();
 }
 
-class _FacultyIDScreenState extends State<FacultyIDScreen> {
+class _StudentIDScreenState extends State<StudentIDScreen> {
   String _userID = "";
   String _userName = "";
   bool _isLoading = true;
@@ -20,14 +20,19 @@ class _FacultyIDScreenState extends State<FacultyIDScreen> {
     _loadDataFromPrefs();
   }
 
+  // Same logic as Faculty: Pull individual keys saved during login
   Future<void> _loadDataFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // Ensure fresh data
+
     setState(() {
-      // Get the ID saved during login
-      _userID = prefs.getString('ID') ?? "N/A";
-      String f = prefs.getString('fName') ?? "Faculty";
+      // Look for 'ID' (from model) or 'userCode' (from login controller)
+      _userID = prefs.getString('ID') ?? prefs.getString('userCode') ?? "N/A";
+
+      String f = prefs.getString('fName') ?? "Student";
       String l = prefs.getString('lName') ?? "";
       _userName = "$f $l".trim();
+
       _isLoading = false;
     });
   }
@@ -77,7 +82,14 @@ class _FacultyIDScreenState extends State<FacultyIDScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA)),
-          const Text("ID", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF5C5C80))),
+          const Text(
+            "Student ID",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF5C5C80),
+            ),
+          ),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset('assets/images/uni.jpeg', width: 36, height: 36),
@@ -94,17 +106,41 @@ class _FacultyIDScreenState extends State<FacultyIDScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.85),
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: const Color(0xFF237ABA).withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF237ABA).withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          )
+        ],
         border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
       ),
       child: Column(
         children: [
-          _buildDecorativeTop(),
+          // Decorative Elements
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildDot(),
+              const SizedBox(width: 15),
+              Container(
+                width: 60, height: 12,
+                decoration: BoxDecoration(color: const Color(0xFFE0E0FF), borderRadius: BorderRadius.circular(10)),
+              ),
+              const SizedBox(width: 15),
+              _buildDot(),
+            ],
+          ),
           const SizedBox(height: 30),
-          _buildBadgeIcon(),
+
+          // Identity Info
+          Text(_userName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF5C5C80))),
+          const SizedBox(height: 5),
+          Text("ID: $_userID", style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500)),
+
           const SizedBox(height: 40),
 
-          // QR CODE USING ID FROM PREFS
+          // QR CODE USING ID FROM PREFERENCES
           ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
               colors: [Color(0xFF237ABA), Color(0xFF9C2CF3)],
@@ -113,63 +149,32 @@ class _FacultyIDScreenState extends State<FacultyIDScreen> {
             ).createShader(bounds),
             blendMode: BlendMode.srcIn,
             child: QrImageView(
-              data: _userID, // THE ID FROM SHARED PREFERENCES
+              data: _userID, // The ID retrieved from SharedPreferences
               version: QrVersions.auto,
-              size: 220.0,
+              size: 240.0,
               embeddedImage: const AssetImage('assets/images/uni.jpeg'),
-              embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(40, 40)),
+              embeddedImageStyle: const QrEmbeddedImageStyle(size: Size(45, 45)),
             ),
           ),
 
-          const SizedBox(height: 50),
-          _buildPunchButton(),
+          const SizedBox(height: 30),
+          const Text(
+            "Scan for Identity Verification",
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDecorativeTop() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildDot(),
-        const SizedBox(width: 15),
-        Container(width: 60, height: 12, decoration: BoxDecoration(color: const Color(0xFFE0E0FF), borderRadius: BorderRadius.circular(10))),
-        const SizedBox(width: 15),
-        _buildDot(),
-      ],
-    );
-  }
-
   Widget _buildDot() => Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFFE0E0FF), shape: BoxShape.circle));
-
-  Widget _buildBadgeIcon() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFF7B61FF).withOpacity(0.8), borderRadius: BorderRadius.circular(12)),
-      child: const Icon(Icons.badge_outlined, color: Colors.white, size: 40),
-    );
-  }
-
-  Widget _buildPunchButton() {
-    return SizedBox(
-      width: double.infinity, height: 55,
-      child: OutlinedButton(
-        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Punch Request Sent!"))),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF7B61FF), width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.white,
-        ),
-        child: const Text("Punch IN", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF5C5C80))),
-      ),
-    );
-  }
 
   Widget _buildHomeFab() {
     return Container(
       height: 70, width: 70,
-      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFF4A90E2).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))]),
+      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+        BoxShadow(color: const Color(0xFF4A90E2).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 8))
+      ]),
       child: FloatingActionButton(
         onPressed: () => Navigator.pop(context),
         elevation: 0, backgroundColor: Colors.transparent, shape: const CircleBorder(),

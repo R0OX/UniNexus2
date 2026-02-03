@@ -85,8 +85,6 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => FacultyIDScreen(
-            userID: userID,
-            userName: "$fName $lName",
           ),
         ),
       );

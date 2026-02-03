@@ -117,8 +117,7 @@ class _QAScreenState extends State<QAScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => FacultyIDScreen(
-            userID: userID,
-            userName: "$fName $lName",
+
           ),
         ),
       );

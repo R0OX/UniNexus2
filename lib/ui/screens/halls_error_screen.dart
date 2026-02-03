@@ -83,8 +83,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => FacultyIDScreen(
-            userID: userID,
-            userName: "$fName $lName",
+
           ),
         ),
       );

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uninexus/ui/screens/profile_screen.dart';
-import 'attendance_session_screen.dart';
-import 'faculty_id_screen.dart'; // Import the ID screen
+import 'faculty_id_screen.dart';
+import 'qa_screen.dart';
+import 'profile_screen.dart';
 import 'halls_screen.dart';
-import 'qa_screen.dart';        // Import the Q&A screen
+import 'attendance_session_screen.dart';
 
 class FacultyHomeScreen extends StatefulWidget {
   final String firstName;
@@ -24,7 +24,14 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
   int _selectedIndex = 0;
   String _storedFirstName = "";
   String _storedLastName = "";
-  String _storedUserID = ""; // <--- NEW VARIABLE FOR ID
+  String _storedUserID = "";
+
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Gradient _fabGradient = const LinearGradient(
+    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   @override
   void initState() {
@@ -37,15 +44,12 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      // Load Name
       if (_storedFirstName == "Faculty" || _storedFirstName.isEmpty) {
         _storedFirstName = prefs.getString('userFirstName') ?? "Faculty";
       }
       if (_storedLastName.isEmpty) {
         _storedLastName = prefs.getString('userLastName') ?? "";
       }
-
-      // Load ID (This key 'userCode' matches your LoginScreen)
       _storedUserID = prefs.getString('userCode') ?? "No ID";
     });
   }
@@ -57,19 +61,14 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
 
     if (index == 2) {
       Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
-    }
-    // ADD THIS BLOCK
-    else if (index == 3) {
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => ProfileScreen(
-                userID: _storedUserID,
-                firstName: _storedFirstName,
-                lastName: _storedLastName,
-              )
+    } else if (index == 3) {
+      Navigator.push(context, MaterialPageRoute(
+          builder: (context) => ProfileScreen(
+            userID: _storedUserID,
+            firstName: _storedFirstName,
+            lastName: _storedLastName,
           )
-      );
+      ));
     }
   }
 
@@ -78,7 +77,7 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
     return Scaffold(
       extendBody: true,
 
-      // --- FAB (QR Code Button) ---
+      // --- FAB ---
       floatingActionButton: Container(
         height: 70,
         width: 70,
@@ -86,7 +85,7 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.4),
+              color: _mainPurple.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -95,12 +94,11 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
         ),
         child: FloatingActionButton(
           onPressed: () {
-            // --- NAVIGATE TO ID SCREEN WITH REAL DATA ---
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => FacultyIDScreen(
-                  userID: _storedUserID, // <--- PASSING DYNAMIC ID
+                  userID: _storedUserID,
                   userName: "$_storedFirstName $_storedLastName",
                 ),
               ),
@@ -112,19 +110,16 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF237ABA), Color(0xFF5C9CE0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: _fabGradient,
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Image.asset(
                 'assets/images/qr_code.png',
                 color: Colors.white,
+                errorBuilder: (c, o, s) => const Icon(Icons.qr_code, color: Colors.white, size: 30),
               ),
             ),
           ),
@@ -132,7 +127,7 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // --- Bottom Navigation Bar ---
+      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -150,21 +145,22 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
           color: Colors.white,
           surfaceTintColor: Colors.white,
           elevation: 0,
-          height: 80,
+          height: 90,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavBarItem('assets/images/menu.png', "Community", 0),
-              _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
-              const SizedBox(width: 48), // Space for FAB
-              _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
-              _buildNavBarItem('assets/images/profile.png', "Profile", 3),
+              // Pass standard Icons as fallback if image fails
+              _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0, Icons.people_alt_rounded),
+              _buildNavBarItem('assets/images/calendar.png', "Schedule", 1, Icons.calendar_month_rounded),
+              const SizedBox(width: 48),
+              _buildNavBarItem('assets/images/qa.png', "Q&A", 2, Icons.question_answer_rounded),
+              _buildNavBarItem('assets/images/profile.png', "Profile", 3, Icons.person_rounded),
             ],
           ),
         ),
       ),
 
-      // ... Rest of the body code remains exactly the same ...
+      // --- MAIN BODY ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -177,7 +173,7 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
         child: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 100),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 120),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -185,7 +181,8 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA)),
+                    Image.asset('assets/images/menu.png', width: 28, color: _mainPurple,
+                        errorBuilder: (c,o,s) => Icon(Icons.menu, color: _mainPurple)),
                     const Text(
                       "Home",
                       style: TextStyle(
@@ -204,7 +201,8 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.asset('assets/images/uni.jpeg', width: 36, height: 36),
+                        child: Image.asset('assets/images/uni.jpeg', width: 36, height: 36,
+                            errorBuilder: (c,o,s) => const Icon(Icons.school, size: 36)),
                       ),
                     ),
                   ],
@@ -217,11 +215,11 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF237ABA).withOpacity(0.08),
+                        color: _mainPurple.withOpacity(0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -269,27 +267,22 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
                     Expanded(
                       child: _buildActionCard(
                         title: "Halls",
-                        iconPath: 'assets/images/main_calender.png',
+                        iconPath: 'assets/images/classroom_1.png',
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const HallsScreen()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const HallsScreen()));
                         },
+                        fallbackIcon: Icons.meeting_room_rounded,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildActionCard(
                         title: "Attendance",
-                        iconPath: 'assets/images/tasks.png',
+                        iconPath: 'assets/images/user-check_1.png',
                         onTap: () {
-                          // --- NAVIGATE TO ATTENDANCE SESSION SCREEN ---
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const AttendanceSessionScreen()),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AttendanceSessionScreen()));
                         },
+                        fallbackIcon: Icons.co_present_rounded,
                       ),
                     ),
                   ],
@@ -297,77 +290,37 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
 
                 const SizedBox(height: 24),
 
-                // 4. Management / Notification Section
+                // 4. Notifications Container
                 Container(
                   width: double.infinity,
-                  height: 200,
+                  height: 220,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFEAF4FF).withOpacity(0.9),
-                        const Color(0xFFF5F6FA).withOpacity(0.9)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: Colors.white.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF237ABA).withOpacity(0.1),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+                    border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
                   ),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEAF4FF),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(22),
-                            topRight: Radius.circular(22),
-                          ),
-                        ),
-                        child: Row(
+                      Expanded(
+                        child: ListView(
+                          physics: const BouncingScrollPhysics(),
                           children: [
-                            Image.asset('assets/images/notification.png', width: 20, color: const Color(0xFF237ABA)),
-                            const SizedBox(width: 10),
-                            const Text(
-                              "Management",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5C7CFA),
-                              ),
+                            _buildNotificationCard(
+                              title: "Management",
+                              message: "Meeting today on 12:30",
+                              icon: Icons.notifications_none_rounded,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildNotificationCard(
+                              title: "System Update",
+                              message: "Maintenance scheduled for 10 PM",
+                              icon: Icons.settings_suggest_outlined,
                             ),
                           ],
                         ),
                       ),
-                      const Divider(height: 1, color: Colors.white),
-
-                      // Content
-                      Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "Meeting today on 12:30",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black.withOpacity(0.8),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
                     ],
                   ),
                 ),
@@ -379,28 +332,43 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
     );
   }
 
-  // Helper widgets
-  Widget _buildNavBarItem(String iconPath, String label, int index) {
+  // --- HELPER WIDGETS ---
+
+  Widget _buildNavBarItem(String iconPath, String label, int index, IconData fallbackIcon) {
     final isSelected = _selectedIndex == index;
+    final Color itemColor = isSelected ? _mainPurple : Colors.grey.shade400;
+
     return GestureDetector(
       onTap: () => _onItemTapped(index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            iconPath,
+          // Use Image with errorBuilder
+          SizedBox(
             width: 24,
             height: 24,
-            color: isSelected ? const Color(0xFF237ABA) : Colors.grey.shade400,
+            child: Image.asset(
+              iconPath,
+              fit: BoxFit.contain,
+              color: itemColor,
+              errorBuilder: (context, error, stackTrace) {
+                // FALLBACK: If image is missing, show Icon instead of Red Box
+                return Icon(fallbackIcon, color: itemColor, size: 24);
+              },
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: isSelected ? const Color(0xFF237ABA) : Colors.grey.shade400,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          const SizedBox(height: 4),
+          // Wrap text in Flexible to prevent overflow
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: itemColor,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis, // Add dots if too long
             ),
           ),
         ],
@@ -412,11 +380,12 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
     required String title,
     required String iconPath,
     required VoidCallback onTap,
+    required IconData fallbackIcon,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 110,
+        height: 125,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -424,7 +393,7 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
           border: Border.all(color: Colors.white.withOpacity(0.5)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF237ABA).withOpacity(0.08),
+              color: _mainPurple.withOpacity(0.1),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -433,18 +402,80 @@ class _FacultyHomeScreenState extends State<FacultyHomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(iconPath, width: 38, height: 38),
+            // Image with Fallback
+            SizedBox(
+              width: 38,
+              height: 38,
+              child: Image.asset(
+                iconPath,
+                color: const Color(0xFF5C5C80),
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(fallbackIcon, size: 38, color: const Color(0xFF5C5C80));
+                },
+              ),
+            ),
             const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF5C5C80),
+            // Text wrapped to prevent overflow
+            Flexible(
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF7B61FF),
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard({required String title, required String message, required IconData icon}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF4FF).withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: _mainPurple, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _mainPurple,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(width: 1, height: 16, color: Colors.grey.withOpacity(0.5)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

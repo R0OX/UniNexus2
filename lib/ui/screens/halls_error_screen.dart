@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'faculty_home_screen.dart'; // For navigation context if needed
-import 'faculty_id_screen.dart';    // Placeholder
+import 'package:shared_preferences/shared_preferences.dart';
+// Import screens for navigation
+import 'faculty_home_screen.dart';
+import 'qa_screen.dart';
+import 'profile_screen.dart';
+import 'halls_screen.dart';
+import 'faculty_id_screen.dart';
 
 class HallErrorScreen extends StatefulWidget {
   const HallErrorScreen({super.key});
@@ -10,12 +15,22 @@ class HallErrorScreen extends StatefulWidget {
 }
 
 class _HallErrorScreenState extends State<HallErrorScreen> {
-  // Controllers (Ready for backend logic later)
+  // Controllers
   final TextEditingController _hallNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String? _selectedErrorType;
 
-  // Dropdown Items
+  // Active Index 1 (Since this is accessed from Halls/Schedule area)
+  final int _selectedIndex = 1;
+
+  // Colors
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Gradient _fabGradient = const LinearGradient(
+    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   final List<String> _errorTypes = [
     'Projector Issue',
     'Air Conditioner',
@@ -24,12 +39,64 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
     'Other'
   ];
 
+  // --- NAVIGATION LOGIC ---
+  void _onNavBarTapped(int index) async {
+    if (index == 0) {
+      // Community -> Home
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    else if (index == 1) {
+      // Schedule -> Go back to Halls list?
+      // Or stay here? Usually tapping "Schedule" again takes you to the main schedule list.
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HallsScreen()));
+    }
+    else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
+    }
+    else if (index == 3) {
+      final prefs = await SharedPreferences.getInstance();
+      final userID = prefs.getString('userCode') ?? "No ID";
+      final fName = prefs.getString('userFirstName') ?? "Faculty";
+      final lName = prefs.getString('userLastName') ?? "";
+
+      if (mounted) {
+        Navigator.push(context, MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              userID: userID,
+              firstName: fName,
+              lastName: lName,
+            )
+        ));
+      }
+    }
+  }
+
+  // --- QR BUTTON LOGIC ---
+  void _openQRScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userID = prefs.getString('userCode') ?? "No ID";
+    final fName = prefs.getString('userFirstName') ?? "Faculty";
+    final lName = prefs.getString('userLastName') ?? "";
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FacultyIDScreen(
+            userID: userID,
+            userName: "$fName $lName",
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
 
-      // --- FAB (QR Code) ---
+      // --- FAB (Gradient) ---
       floatingActionButton: Container(
         height: 70,
         width: 70,
@@ -37,7 +104,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.4),
+              color: _mainPurple.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -45,22 +112,16 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            // TODO: QR Action
-          },
+          onPressed: _openQRScreen,
           elevation: 0,
           backgroundColor: Colors.transparent,
           shape: const CircleBorder(),
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF237ABA), Color(0xFF5C9CE0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: _fabGradient, // Blue -> Purple
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -71,7 +132,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // --- BOTTOM NAV BAR (Visual Only) ---
+      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -93,11 +154,11 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavBarItem('assets/images/menu.png', "Community"),
-              _buildNavBarItem('assets/images/calendar.png', "Schedule"),
-              const SizedBox(width: 48), // Space for FAB
-              _buildNavBarItem('assets/images/qa.png', "Q&A"),
-              _buildNavBarItem('assets/images/profile.png', "Profile"),
+              _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
+              _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
+              const SizedBox(width: 48),
+              _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
+              _buildNavBarItem('assets/images/profile.png', "Profile", 3),
             ],
           ),
         ),
@@ -125,7 +186,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context), // Back button
-                      child: Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA)),
+                      child: Image.asset('assets/images/menu.png', width: 28, color: _mainPurple),
                     ),
                     const Text(
                       "Hall Error",
@@ -144,13 +205,15 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
 
                 const SizedBox(height: 30),
 
-                // 2. The Form Card
+                // 2. The Form Card (GLASSY + PURPLE BORDER)
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    // Glassy Effect
+                    color: Colors.white.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFF7B61FF).withOpacity(0.3), width: 1.5),
+                    // Purple Border
+                    border: Border.all(color: _mainPurple.withOpacity(0.5), width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF237ABA).withOpacity(0.1),
@@ -168,7 +231,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
                       _buildTextField(
                         controller: _hallNameController,
                         hint: "Submit the errored hall's name",
-                        icon: Icons.send_rounded, // Send icon inside
+                        icon: Icons.send_rounded,
                         isButton: true,
                       ),
 
@@ -232,13 +295,12 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
                       _buildLabel("Attachment"),
                       const SizedBox(height: 8),
                       _buildTextField(
-                          controller: TextEditingController(), // Placeholder
+                          controller: TextEditingController(),
                           hint: "Attach a photo if possible",
                           icon: Icons.add_rounded,
-                          isButton: true, // Acts as a button
+                          isButton: true,
                           onIconTap: () {
                             // TODO: Open Gallery
-                            print("Open Gallery");
                           }
                       ),
                     ],
@@ -253,24 +315,23 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
                   height: 55,
                   child: OutlinedButton(
                     onPressed: () {
-                      // TODO: Send to Firebase
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Error Report Submitted (UI Only)")),
+                        const SnackBar(content: Text("Error Report Submitted!")),
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF7B61FF), width: 2), // Purple Border
+                      side: BorderSide(color: _mainPurple, width: 2), // Purple Border
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
                       backgroundColor: Colors.white,
                     ),
-                    child: const Text(
+                    child: Text(
                       "Submit",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF5C5C80), // Dark Purple/Blue Text
+                        color: const Color(0xFF5C5C80),
                       ),
                     ),
                   ),
@@ -322,7 +383,7 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
             child: Container(
               margin: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: const Color(0xFF7B61FF).withOpacity(0.8), // Purple Icon Bg
+                color: _mainPurple.withOpacity(0.8), // Purple Icon Bg
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 24),
@@ -334,27 +395,34 @@ class _HallErrorScreenState extends State<HallErrorScreen> {
     );
   }
 
-  Widget _buildNavBarItem(String iconPath, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Image.asset(
-          iconPath,
-          width: 24,
-          height: 24,
-          color: Colors.grey.shade400,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w500,
+  Widget _buildNavBarItem(String iconPath, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    final Color itemColor = isSelected ? _mainPurple : Colors.grey.shade400;
+
+    return GestureDetector(
+      onTap: () => _onNavBarTapped(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            iconPath,
+            width: 24,
+            height: 24,
+            color: itemColor,
+            errorBuilder: (c,o,s) => Icon(Icons.circle, size: 24, color: itemColor),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: itemColor,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

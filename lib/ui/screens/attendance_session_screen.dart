@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart'; // Using this to generate the QR
-import 'faculty_home_screen.dart'; // For navigation context
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// Import screens for navigation
+import 'faculty_home_screen.dart';
+import 'qa_screen.dart';
+import 'profile_screen.dart';
+import 'faculty_id_screen.dart';
 
 class AttendanceSessionScreen extends StatefulWidget {
   const AttendanceSessionScreen({super.key});
@@ -15,7 +20,17 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
   String? _selectedCourse;
   String? _selectedSessionType;
 
-  // Mock Data (We will fetch these from Firebase later)
+  // The Active Index for this screen is technically not on the bar (it's a sub-screen)
+  final int _selectedIndex = 1;
+
+  // Colors
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Gradient _fabGradient = const LinearGradient(
+    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   final List<String> _courses = [
     'CCNA R&S II',
     'Network Security',
@@ -29,12 +44,61 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
     'Lab'
   ];
 
+  // --- NAVIGATION LOGIC ---
+  void _onNavBarTapped(int index) async {
+    if (index == 0) {
+      Navigator.of(context).pop();
+    }
+    else if (index == 1) {
+      // Already here or related area
+    }
+    else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
+    }
+    else if (index == 3) {
+      final prefs = await SharedPreferences.getInstance();
+      final userID = prefs.getString('userCode') ?? "No ID";
+      final fName = prefs.getString('userFirstName') ?? "Faculty";
+      final lName = prefs.getString('userLastName') ?? "";
+
+      if (mounted) {
+        Navigator.push(context, MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              userID: userID,
+              firstName: fName,
+              lastName: lName,
+            )
+        ));
+      }
+    }
+  }
+
+  // --- QR BUTTON LOGIC ---
+  void _openQRScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userID = prefs.getString('userCode') ?? "No ID";
+    final fName = prefs.getString('userFirstName') ?? "Faculty";
+    final lName = prefs.getString('userLastName') ?? "";
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FacultyIDScreen(
+            userID: userID,
+            userName: "$fName $lName",
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
 
-      // --- FAB (QR Code) ---
+      // --- FAB (Gradient) ---
       floatingActionButton: Container(
         height: 70,
         width: 70,
@@ -42,7 +106,7 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.4),
+              color: _mainPurple.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -50,22 +114,16 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            // TODO: QR Action
-          },
+          onPressed: _openQRScreen,
           elevation: 0,
           backgroundColor: Colors.transparent,
           shape: const CircleBorder(),
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF237ABA), Color(0xFF5C9CE0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: _fabGradient, // Blue -> Purple
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -76,7 +134,7 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // --- BOTTOM NAV BAR (Visual Only) ---
+      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -98,11 +156,11 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavBarItem('assets/images/menu.png', "Community"),
-              _buildNavBarItem('assets/images/calendar.png', "Schedule"),
-              const SizedBox(width: 48), // Space for FAB
-              _buildNavBarItem('assets/images/qa.png', "Q&A"),
-              _buildNavBarItem('assets/images/profile.png', "Profile"),
+              _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
+              _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
+              const SizedBox(width: 48),
+              _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
+              _buildNavBarItem('assets/images/profile.png', "Profile", 3),
             ],
           ),
         ),
@@ -129,11 +187,11 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context), // Back button
-                      child: Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA)),
+                      onTap: () => Navigator.pop(context),
+                      child: Image.asset('assets/images/menu.png', width: 28, color: _mainPurple),
                     ),
                     const Text(
-                      "Attendance", // UPDATED TITLE
+                      "Attendance",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -149,13 +207,15 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
 
                 const SizedBox(height: 30),
 
-                // 2. QR Code Display Card
+                // 2. QR Code Display Card (GLASSY + LAYERED QR)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(30),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    // GLASSY EFFECT
+                    color: Colors.white.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.white.withOpacity(0.5)),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF237ABA).withOpacity(0.1),
@@ -166,23 +226,60 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
                   ),
                   child: Column(
                     children: [
-                      // QR Code (Placeholder or Generated)
-                      // We use the QrImageView to match the style of ID screen
-                      QrImageView(
-                        data: "Session-Placeholder-123", // Will be dynamic later
-                        version: QrVersions.auto,
-                        size: 200.0,
-                        eyeStyle: const QrEyeStyle(
-                          eyeShape: QrEyeShape.square,
-                          color: Color(0xFF4A90E2), // Blue-ish QR like design
-                        ),
-                        dataModuleStyle: const QrDataModuleStyle(
-                          dataModuleShape: QrDataModuleShape.circle,
-                          color: Color(0xFF5C5C80),
-                        ),
-                        embeddedImage: const AssetImage('assets/images/uni.jpeg'),
-                        embeddedImageStyle: const QrEmbeddedImageStyle(
-                          size: Size(30, 30),
+                      // --- LAYERED QR CODE ---
+                      // We use a Stack to place the original logo ON TOP of the gradient QR
+                      SizedBox(
+                        width: 200.0,
+                        height: 200.0,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // LAYER 1: The Gradient QR Code (data dots only)
+                            ShaderMask(
+                              shaderCallback: (bounds) {
+                                return const LinearGradient(
+                                  colors: [Color(0xFF237ABA), Color(0xFF9C2CF3)], // Blue -> Purple
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ).createShader(bounds);
+                              },
+                              blendMode: BlendMode.srcIn,
+                              child: QrImageView(
+                                data: "Session-Placeholder-123",
+                                version: QrVersions.auto,
+                                size: 200.0,
+                                // Base color black, will be overridden by shader
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.circle,
+                                  color: Colors.black,
+                                ),
+                                // IMPORTANT: No embeddedImage here!
+                              ),
+                            ),
+
+                            // LAYER 2: The Original, Uncolored Logo centered on top
+                            Container(
+                              width: 45, // Size of the logo box
+                              height: 45,
+                              decoration: BoxDecoration(
+                                color: Colors.white, // White background behind logo for cleanliness
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.all(3), // Slight padding for the white border effect
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(5),
+                                child: Image.asset(
+                                  'assets/images/uni.jpeg',
+                                  fit: BoxFit.cover,
+                                  // No color property here, so it keeps original colors
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -191,11 +288,12 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
 
                 const SizedBox(height: 24),
 
-                // 3. Form Card
+                // 3. Form Card (GLASSY EFFECT)
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
+                    // GLASSY EFFECT
+                    color: Colors.white.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
                     boxShadow: [
@@ -251,7 +349,7 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
                                 _buildLabel("Duration"),
                                 const SizedBox(height: 8),
                                 Container(
-                                  height: 55, // Match dropdown height
+                                  height: 55,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF2F2F2),
                                     borderRadius: BorderRadius.circular(16),
@@ -284,7 +382,6 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
                   height: 55,
                   child: OutlinedButton(
                     onPressed: () {
-                      // TODO: Generate Session Logic
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Session Created!")),
                       );
@@ -362,27 +459,34 @@ class _AttendanceSessionScreenState extends State<AttendanceSessionScreen> {
     );
   }
 
-  Widget _buildNavBarItem(String iconPath, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Image.asset(
-          iconPath,
-          width: 24,
-          height: 24,
-          color: Colors.grey.shade400,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w500,
+  Widget _buildNavBarItem(String iconPath, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    final Color itemColor = isSelected ? _mainPurple : Colors.grey.shade400;
+
+    return GestureDetector(
+      onTap: () => _onNavBarTapped(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            iconPath,
+            width: 24,
+            height: 24,
+            color: itemColor,
+            errorBuilder: (c,o,s) => Icon(Icons.circle, size: 24, color: itemColor),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: itemColor,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

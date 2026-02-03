@@ -1,5 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'faculty_home_screen.dart';
+import 'qa_screen.dart';
+import 'halls_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userID;
@@ -18,39 +22,95 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Navigation index for Profile is 3
-  int _selectedIndex = 3;
+  final int _selectedIndex = 3;
+
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Gradient _fabGradient = const LinearGradient(
+    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   Map<String, dynamic>? _profileData;
   bool _isLoading = true;
 
+  // FIX: Removed 'late'. We initialize them immediately to avoid crashes.
+  String _displayFirstName = "Faculty";
+  String _displayLastName = "";
+  String _displayID = "";
+
   @override
   void initState() {
     super.initState();
-    _fetchProfileData();
+    // 1. Initialize with passed values immediately
+    _displayFirstName = widget.firstName.isNotEmpty ? widget.firstName : "Faculty";
+    _displayLastName = widget.lastName;
+    _displayID = widget.userID;
+
+    // 2. Trigger data fetch
+    _loadAndFetchData();
   }
 
-  // Fetch full details (Email, Phone, etc.) using the ID
-  Future<void> _fetchProfileData() async {
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('faculty')
-          .where('ID', isEqualTo: widget.userID)
-          .limit(1)
-          .get();
+  Future<void> _loadAndFetchData() async {
+    final prefs = await SharedPreferences.getInstance();
 
-      if (querySnapshot.docs.isNotEmpty) {
+    // If ID is missing (e.g. came from a screen that didn't pass it), load from storage
+    if (_displayID == "No ID" || _displayID.isEmpty) {
+      String savedID = prefs.getString('userCode') ?? "No ID";
+      String savedF = prefs.getString('userFirstName') ?? "Faculty";
+      String savedL = prefs.getString('userLastName') ?? "";
+
+      if (mounted) {
         setState(() {
-          _profileData = querySnapshot.docs.first.data();
-          _isLoading = false;
+          _displayID = savedID;
+          _displayFirstName = savedF;
+          _displayLastName = savedL;
         });
-      } else {
-        setState(() => _isLoading = false);
       }
-    } catch (e) {
-      print("Error fetching profile: $e");
-      setState(() => _isLoading = false);
     }
+
+    // Now fetch full details from Firebase
+    if (_displayID != "No ID") {
+      try {
+        final querySnapshot = await FirebaseFirestore.instance
+            .collection('faculty')
+            .where('ID', isEqualTo: _displayID)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty && mounted) {
+          final data = querySnapshot.docs.first.data();
+          setState(() {
+            _profileData = data;
+            // Update names if they exist in the detailed profile
+            if (data['fName'] != null) _displayFirstName = data['fName'];
+            if (data['lName'] != null) _displayLastName = data['lName'];
+            _isLoading = false;
+          });
+        } else {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      } catch (e) {
+        print("Error fetching profile: $e");
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // --- NAVIGATION LOGIC ---
+  void _onNavBarTapped(int index) {
+    if (index == 0) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+    else if (index == 1) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const HallsScreen()));
+    }
+    else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
+    }
+    // Index 3 is this screen
   }
 
   @override
@@ -58,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       extendBody: true,
 
-      // --- FAB (Home Button) ---
+      // --- FAB ---
       floatingActionButton: Container(
         height: 70,
         width: 70,
@@ -66,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.4),
+              color: _mainPurple.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -75,7 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: FloatingActionButton(
           onPressed: () {
-            Navigator.pop(context); // Back to Home
+            Navigator.of(context).popUntil((route) => route.isFirst);
           },
           elevation: 0,
           backgroundColor: Colors.transparent,
@@ -83,13 +143,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF237ABA), Color(0xFF5C9CE0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: _fabGradient,
             ),
             child: const Icon(Icons.home_rounded, color: Colors.white, size: 32),
           ),
@@ -97,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // --- Bottom Navigation Bar ---
+      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -119,9 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavBarItem('assets/images/menu.png', "Community", 0),
+              _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
               _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
-              const SizedBox(width: 48), // Space for FAB
+              const SizedBox(width: 48),
               _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
               _buildNavBarItem('assets/images/profile.png', "Profile", 3),
             ],
@@ -129,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
 
-      // --- Main Content ---
+      // --- MAIN CONTENT ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -151,7 +207,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA)),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Image.asset('assets/images/menu.png', width: 28, color: _mainPurple),
+                    ),
                     const Text(
                       "Profile",
                       style: TextStyle(
@@ -169,12 +228,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 30),
 
-                // 2. Identity Card (Top)
+                // 2. Identity Card (Glassy + Purple Border)
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _mainPurple.withOpacity(0.5), width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF237ABA).withOpacity(0.1),
@@ -185,33 +245,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Avatar Circle
                       Container(
                         width: 80,
                         height: 80,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFF8B00FF), // Bright Purple bg
+                          color: Color(0xFF8B00FF),
                         ),
                         child: const Icon(Icons.person, color: Colors.white, size: 50),
                       ),
                       const SizedBox(width: 20),
 
-                      // Vertical Divider line
                       Container(
                         height: 60,
                         width: 1,
-                        color: Colors.grey.shade300,
+                        color: Colors.grey.shade400,
                       ),
                       const SizedBox(width: 20),
 
-                      // Name & ID
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "${widget.firstName} ${widget.lastName}",
+                              "$_displayFirstName $_displayLastName",
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -220,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              widget.userID,
+                              _displayID,
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -236,13 +293,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 20),
 
-                // 3. Details List (Bottom Card)
+                // 3. Details List (Glassy + Purple Border)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withOpacity(0.75),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                    border: Border.all(color: _mainPurple.withOpacity(0.5), width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF237ABA).withOpacity(0.08),
@@ -253,16 +310,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
-                      _buildProfileField("Faculty :", "Computer Science"), // Hardcoded or fetch
-                      _buildProfileField("Year :", "2025"), // Hardcoded or fetch
+                      _buildProfileField("Faculty :", "Computer Science"),
+                      _buildProfileField("Year :", "2025"),
                       _buildProfileField("E-mail :", _profileData?['email'] ?? "N/A"),
                       _buildProfileField("Phone no. :", _profileData?['pNum'] ?? "N/A"),
-                      _buildProfileField("National ID :", "N/A"), // Not in DB screenshot
+                      _buildProfileField("National ID :", _profileData?['nid'] ?? "N/A"),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 100), // Bottom spacer
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -270,8 +327,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  // --- Helper Widgets ---
 
   Widget _buildProfileField(String label, String value) {
     return Padding(
@@ -297,11 +352,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          // Underline
           Container(
             height: 1,
             width: double.infinity,
-            color: const Color(0xFF7B61FF).withOpacity(0.5), // Light purple line
+            color: _mainPurple.withOpacity(0.5),
           ),
         ],
       ),
@@ -310,32 +364,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildNavBarItem(String iconPath, String label, int index) {
     final isSelected = _selectedIndex == index;
+    final Color itemColor = isSelected ? _mainPurple : Colors.grey.shade400;
+
     return GestureDetector(
-      onTap: () {
-        // Since we are IN the profile screen, clicking profile does nothing.
-        // Clicking others navigates.
-        if (index == 0) {
-          // Navigate Community
-        } else if (index == 2) {
-          // Navigate QA
-        }
-      },
+      onTap: () => _onNavBarTapped(index),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
             iconPath,
             width: 24,
             height: 24,
-            color: isSelected ? const Color(0xFF237ABA) : Colors.grey.shade400,
+            color: itemColor,
+            errorBuilder: (c,o,s) => Icon(Icons.circle, size: 24, color: itemColor),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isSelected ? const Color(0xFF237ABA) : Colors.grey.shade400,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: itemColor,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
           ),
         ],

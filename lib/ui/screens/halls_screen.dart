@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// Import your screens
 import 'faculty_home_screen.dart';
+import 'qa_screen.dart';
+import 'profile_screen.dart';
 import 'halls_error_screen.dart';
+import 'faculty_id_screen.dart'; // Needed for the QR button action
 
 class HallsScreen extends StatefulWidget {
   const HallsScreen({super.key});
@@ -14,8 +19,70 @@ class _HallsScreenState extends State<HallsScreen> {
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
 
-  // --- LOGIC: Get Current Time Slot Key ---
-  // Returns keys exactly like "9:00-9:50" to match your Firebase fields
+  // Set the "Schedule" tab (index 1) as active
+  final int _selectedIndex = 1;
+
+  // Colors
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Gradient _fabGradient = const LinearGradient(
+    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // --- NAVIGATION LOGIC ---
+  void _onNavBarTapped(int index) async {
+    if (index == 0) {
+      // Community (Home) -> Go back
+      Navigator.of(context).pop();
+    }
+    else if (index == 1) {
+      // Already on Schedule/Halls -> Do nothing
+    }
+    else if (index == 2) {
+      // Go to Q&A
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
+    }
+    else if (index == 3) {
+      // Go to Profile (Need to fetch IDs first)
+      final prefs = await SharedPreferences.getInstance();
+      final userID = prefs.getString('userCode') ?? "No ID";
+      final fName = prefs.getString('userFirstName') ?? "Faculty";
+      final lName = prefs.getString('userLastName') ?? "";
+
+      if (mounted) {
+        Navigator.push(context, MaterialPageRoute(
+            builder: (context) => ProfileScreen(
+              userID: userID,
+              firstName: fName,
+              lastName: lName,
+            )
+        ));
+      }
+    }
+  }
+
+  // --- QR BUTTON LOGIC ---
+  void _openQRScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userID = prefs.getString('userCode') ?? "No ID";
+    final fName = prefs.getString('userFirstName') ?? "Faculty";
+    final lName = prefs.getString('userLastName') ?? "";
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FacultyIDScreen(
+            userID: userID,
+            userName: "$fName $lName",
+          ),
+        ),
+      );
+    }
+  }
+
+  // --- TIME SLOT LOGIC ---
   String _getCurrentTimeSlot() {
     final now = DateTime.now();
     int totalMinutes = now.hour * 60 + now.minute;
@@ -42,7 +109,7 @@ class _HallsScreenState extends State<HallsScreen> {
     return Scaffold(
       extendBody: true,
 
-      // --- FAB (QR Code) ---
+      // --- FAB WITH GRADIENT ---
       floatingActionButton: Container(
         height: 70,
         width: 70,
@@ -50,7 +117,7 @@ class _HallsScreenState extends State<HallsScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A90E2).withOpacity(0.4),
+              color: _mainPurple.withOpacity(0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -58,22 +125,16 @@ class _HallsScreenState extends State<HallsScreen> {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            // TODO: QR Action
-          },
+          onPressed: _openQRScreen, // Navigates to ID
           elevation: 0,
           backgroundColor: Colors.transparent,
           shape: const CircleBorder(),
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFF237ABA), Color(0xFF5C9CE0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: _fabGradient, // Blue -> Purple
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -84,7 +145,7 @@ class _HallsScreenState extends State<HallsScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      // --- BOTTOM NAV BAR ---
+      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -106,10 +167,14 @@ class _HallsScreenState extends State<HallsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildNavBarItem('assets/images/menu.png', "Community", 0),
+              // Index 0: Community
+              _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
+              // Index 1: Schedule (Active)
               _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
               const SizedBox(width: 48), // Space for FAB
+              // Index 2: Q&A
               _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
+              // Index 3: Profile
               _buildNavBarItem('assets/images/profile.png', "Profile", 3),
             ],
           ),
@@ -138,9 +203,10 @@ class _HallsScreenState extends State<HallsScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        // Back Button behavior on Menu Icon
                         GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: Image.asset('assets/images/menu.png', width: 28, color: const Color(0xFF237ABA))
+                            child: Image.asset('assets/images/menu.png', width: 28, color: _mainPurple)
                         ),
                         const Text(
                           "Halls",
@@ -181,14 +247,14 @@ class _HallsScreenState extends State<HallsScreen> {
                           });
                         },
                         decoration: InputDecoration(
-                          hintText: "Search Hall (e.g. A 108)",
+                          hintText: "Search Hall By Name",
                           hintStyle: TextStyle(color: Colors.grey.shade400),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                           suffixIcon: Container(
                             margin: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF7B61FF).withOpacity(0.8),
+                              color: _mainPurple.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
@@ -200,7 +266,7 @@ class _HallsScreenState extends State<HallsScreen> {
 
                   const SizedBox(height: 20),
 
-                  // -- Halls List (StreamBuilder) --
+                  // -- Halls List --
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance.collection('halls').snapshots(),
@@ -209,46 +275,31 @@ class _HallsScreenState extends State<HallsScreen> {
                           return const Center(child: CircularProgressIndicator());
                         }
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(
-                              child: Text(
-                                "No halls data found.",
-                                style: TextStyle(color: Colors.black54),
-                              )
-                          );
+                          return const Center(child: Text("No halls data found."));
                         }
 
-                        // Parse and Filter Data
                         final docs = snapshot.data!.docs.where((doc) {
                           final data = doc.data() as Map<String, dynamic>;
-
-                          // COMBINE FIELDS: "A" + "101" -> "A 101"
                           String building = (data['building'] ?? "").toString();
                           String code = (data['hallCode'] ?? "").toString();
                           String fullName = "$building $code".trim().toLowerCase();
-
                           return fullName.contains(_searchQuery);
                         }).toList();
 
-                        if (docs.isEmpty) {
-                          return const Center(child: Text("No matches found."));
-                        }
+                        if (docs.isEmpty) return const Center(child: Text("No matches found."));
 
                         return ListView.builder(
                           padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                          physics: const BouncingScrollPhysics(),
                           itemCount: docs.length,
                           itemBuilder: (context, index) {
                             final data = docs[index].data() as Map<String, dynamic>;
 
-                            // 1. Construct Name: "A 101"
                             String building = data['building'] ?? "";
                             String code = data['hallCode'] ?? "";
                             String displayName = "$building $code".trim();
 
-                            // 2. Check Status (Boolean)
-                            // If key exists and is TRUE -> Busy (Red)
-                            // If key is FALSE or doesn't exist -> Free (Green)
                             bool isBusy = false;
-
                             if (currentSlotKey != "OFF_HOURS" && data.containsKey(currentSlotKey)) {
                               isBusy = data[currentSlotKey] == true;
                             }
@@ -262,7 +313,7 @@ class _HallsScreenState extends State<HallsScreen> {
                 ],
               ),
 
-              // -- 4. THE REPORT BUTTON --
+              // -- Report Button (Bottom Right) --
               Positioned(
                 bottom: 100,
                 right: 24,
@@ -274,7 +325,7 @@ class _HallsScreenState extends State<HallsScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF7B61FF).withOpacity(0.3),
+                        color: _mainPurple.withOpacity(0.3),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
@@ -282,13 +333,9 @@ class _HallsScreenState extends State<HallsScreen> {
                   ),
                   child: IconButton(
                     onPressed: () {
-                      // --- NAVIGATE TO ERROR SCREEN ---
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HallErrorScreen()),
-                      );
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const HallErrorScreen()));
                     },
-                    icon: const Icon(Icons.warning_amber_rounded, color: Color(0xFF7B61FF), size: 32),
+                    icon: Icon(Icons.warning_amber_rounded, color: _mainPurple, size: 32),
                   ),
                 ),
               ),
@@ -299,16 +346,16 @@ class _HallsScreenState extends State<HallsScreen> {
     );
   }
 
-  // --- Helper Widget: The Hall Card ---
+  // --- Helper Widget: Hall Card ---
   Widget _buildHallCard(String name, bool isBusy) {
-    // Logic: isBusy (true) = RED, !isBusy (false) = GREEN
     Color statusColor = isBusy ? Colors.red : Colors.greenAccent.shade700;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        // TRANSPARENCY FIX: Opacity 0.75 for glass effect
+        color: Colors.white.withOpacity(0.75),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.6)),
         boxShadow: [
@@ -324,7 +371,7 @@ class _HallsScreenState extends State<HallsScreen> {
         children: [
           Row(
             children: [
-              Image.asset('assets/images/main_calender.png', width: 28, height: 28, color: const Color(0xFF5C5C80)),
+              Image.asset('assets/images/classroom_1.png', width: 28, height: 28, color: const Color(0xFF5C5C80)),
               const SizedBox(width: 15),
               Container(height: 30, width: 1, color: Colors.grey.shade300),
               const SizedBox(width: 15),
@@ -360,26 +407,34 @@ class _HallsScreenState extends State<HallsScreen> {
 
   // --- Helper: Bottom Nav Item ---
   Widget _buildNavBarItem(String iconPath, String label, int index) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Image.asset(
-          iconPath,
-          width: 24,
-          height: 24,
-          color: Colors.grey.shade400,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade400,
-            fontWeight: FontWeight.w500,
+    final isSelected = _selectedIndex == index;
+    final Color itemColor = isSelected ? _mainPurple : Colors.grey.shade400;
+
+    return GestureDetector(
+      onTap: () => _onNavBarTapped(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(
+            iconPath,
+            width: 24,
+            height: 24,
+            color: itemColor,
+            // Fallback icon if asset missing
+            errorBuilder: (context, error, stackTrace) => Icon(Icons.circle, size: 24, color: itemColor),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: itemColor,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

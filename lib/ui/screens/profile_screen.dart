@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import 'stu_schedule.dart';
 import 'qa_screen.dart';
 import 'halls_screen.dart';
-import 'student_id_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userID;
@@ -27,13 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final Color _primaryBlue = const Color(0xFF237ABA);
   final Color _textIndigo = const Color(0xFF5C5C80);
 
-  final Gradient _fabGradient = const LinearGradient(
-    colors: [Color(0xFF237ABA), Color(0xFF7B61FF)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  // User Data Variables
+  // Identity and Contact Variables
   String _displayFirstName = "User";
   String _displayLastName = "";
   String _displayID = "";
@@ -62,15 +54,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _displayID = id;
-        // Role check based on ID Prefix
         _isStudent = id.toUpperCase().startsWith('ST');
-
-        _displayFirstName = prefs.getString('fName') ?? prefs.getString('userFirstName') ?? widget.firstName ?? "User";
-        _displayLastName = prefs.getString('lName') ?? prefs.getString('userLastName') ?? widget.lastName ?? "";
+        _displayFirstName = prefs.getString('fName') ?? prefs.getString('userFirstName') ?? "User";
+        _displayLastName = prefs.getString('lName') ?? prefs.getString('userLastName') ?? "";
         _displayEmail = prefs.getString('email') ?? "N/A";
         _displayPhone = prefs.getString('pNum') ?? "N/A";
         _displayFaculty = prefs.getString('faculty') ?? "N/A";
-        _displayNID = prefs.getString('nationalID') ?? prefs.getString('nid') ?? "N/A";
+        _displayNID = prefs.getString('nationalID') ?? "N/A";
 
         if (_isStudent) {
           _displayYear = prefs.getString('year') ?? "N/A";
@@ -87,10 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      // Dynamic FAB based on role
-      floatingActionButton: _isStudent ? _buildStudentFab() : _buildFacultyFab(),
+      // Fixed: Both use the same Home Button design now
+      floatingActionButton: _buildHomeFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      // Dynamic Bottom Bar based on role
       bottomNavigationBar: _isStudent ? _buildStudentBottomBar() : _buildFacultyBottomBar(),
       body: Container(
         width: double.infinity,
@@ -111,12 +100,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 _buildHeader(),
                 const SizedBox(height: 30),
-                _buildIdentityCard(), // FIXED
+                _buildIdentityCard(),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: _buildScrollableDetailsCard(), // SCROLLABLE
+                  child: _buildScrollableDetailsCard(),
                 ),
-                const SizedBox(height: 110), // Space for Nav Bar
+                const SizedBox(height: 110),
               ],
             ),
           ),
@@ -125,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- HEADER & IDENTITY (FIXED) ---
+  // --- UI COMPONENTS ---
 
   Widget _buildHeader() {
     return Row(
@@ -178,8 +167,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- INFO LIST (SCROLLABLE) ---
-
   Widget _buildScrollableDetailsCard() {
     return Container(
       width: double.infinity,
@@ -226,40 +213,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- DYNAMIC NAVIGATION (STUDENT VS FACULTY) ---
+  // --- NAVIGATION (SYNCED HOME BUTTON) ---
 
-  Widget _buildStudentFab() {
+  Widget _buildHomeFab() {
     return Container(
       height: 70, width: 70,
-      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
-        BoxShadow(color: _mainPurple.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-      ]),
-      child: FloatingActionButton(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StudentIDScreen())),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        shape: const CircleBorder(),
-        child: Container(
-          decoration: BoxDecoration(shape: BoxShape.circle, gradient: _fabGradient),
-          child: Center(child: Image.asset('assets/images/qr_code.png', width: 30, color: Colors.white)),
-        ),
+      decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+                color: _mainPurple.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8)
+            )
+          ]
       ),
-    );
-  }
-
-  Widget _buildFacultyFab() {
-    return Container(
-      height: 70, width: 70,
-      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
-        BoxShadow(color: _mainPurple.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-      ]),
       child: FloatingActionButton(
+        // Returns to the first screen (Home) regardless of role
         onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
         backgroundColor: Colors.transparent,
         elevation: 0,
         shape: const CircleBorder(),
         child: Container(
-          decoration: BoxDecoration(shape: BoxShape.circle, gradient: _fabGradient),
+          width: double.infinity, height: double.infinity,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [_primaryBlue, _mainPurple],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           child: const Icon(Icons.home_rounded, color: Colors.white, size: 32),
         ),
       ),
@@ -278,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _navItem('assets/images/calendar.png', "Schedule", false, onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const StuSchedule()));
           }),
-          const SizedBox(width: 48),
+          const SizedBox(width: 48), // Gap for Home FAB
           _navItem('assets/images/qa.png', "Q&A", false, onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
           }),
@@ -296,13 +280,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _navItem('assets/images/halls.png', "Halls", false, onTap: () {
+          _navItem('assets/images/classroom_1.png', "Halls", false, onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const HallsScreen()));
           }),
           _navItem('assets/images/qa.png', "Q&A", false, onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
           }),
-          const SizedBox(width: 48),
+          const SizedBox(width: 48), // Gap for Home FAB
           _navItem('assets/images/notification.png', "Alerts", false),
           _navItem('assets/images/user.png', "Profile", true),
         ],

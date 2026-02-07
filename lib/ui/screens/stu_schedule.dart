@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/firebase/Schedule_service.dart';
 import '../../model/schedule_model.dart';
-import 'student_id_screen.dart';
+import 'qa_screen.dart';
 import 'profile_screen.dart';
 
 class StuSchedule extends StatefulWidget {
@@ -14,10 +14,7 @@ class StuSchedule extends StatefulWidget {
 }
 
 class _StuScheduleState extends State<StuSchedule> {
-  int _selectedIndex = 1; // Default to Schedule index
-  final ScheduleService _scheduleService = ScheduleService();
-
-  // Color Palette copied from your StuHome
+  final int _selectedIndex = 1;
   final Color _mainPurple = const Color(0xFF7B61FF);
   final Color _primaryBlue = const Color(0xFF237ABA);
   final Color _textIndigo = const Color(0xFF5C5C80);
@@ -31,7 +28,8 @@ class _StuScheduleState extends State<StuSchedule> {
     String section = prefs.getString('section') ?? "2";
     String today = DateFormat('EEEE').format(DateTime.now()).toLowerCase();
 
-    List<ScheduleModel> results = await _scheduleService.getStudentSchedule(
+    final service = ScheduleService();
+    List<ScheduleModel> results = await service.getStudentSchedule(
       year: year, section: section, day: today,
     );
     return results.isNotEmpty ? results.first : null;
@@ -41,8 +39,9 @@ class _StuScheduleState extends State<StuSchedule> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
+      // Replaced QR button with Home FAB
+      floatingActionButton: _buildHomeFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _buildFab(),
       bottomNavigationBar: _buildBottomBar(),
       body: Container(
         width: double.infinity,
@@ -67,17 +66,13 @@ class _StuScheduleState extends State<StuSchedule> {
                   child: FutureBuilder<ScheduleModel?>(
                     future: _fetchMySchedule(),
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (!snapshot.hasData) {
-                        return Center(child: Text("No schedule found", style: TextStyle(color: _textIndigo, fontWeight: FontWeight.bold)));
-                      }
+                      if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                      if (!snapshot.hasData) return Center(child: Text("No schedule found", style: TextStyle(color: _textIndigo, fontWeight: FontWeight.bold)));
                       return _buildSchedulePanel(snapshot.data!);
                     },
                   ),
                 ),
-                const SizedBox(height: 100), // Space for bottom bar
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -86,7 +81,7 @@ class _StuScheduleState extends State<StuSchedule> {
     );
   }
 
-  // --- UI Components Synced with StuHome ---
+  // --- UI Components (Synced with Image) ---
 
   Widget _buildTopHeader() {
     return Row(
@@ -109,14 +104,11 @@ class _StuScheduleState extends State<StuSchedule> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
       ),
       child: Column(
         children: [
-          const Text("Today's Schedule", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
-          const SizedBox(height: 5),
+          const Text("Today's Schedule", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
           Text(DateFormat('MMMM d, yyyy').format(DateTime.now()),
               style: const TextStyle(fontSize: 14, color: Color(0xFF5BA4F5), fontWeight: FontWeight.w600)),
         ],
@@ -126,7 +118,6 @@ class _StuScheduleState extends State<StuSchedule> {
 
   Widget _buildSchedulePanel(ScheduleModel schedule) {
     Set<int> handledIndices = {};
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -140,17 +131,14 @@ class _StuScheduleState extends State<StuSchedule> {
         itemCount: 10,
         itemBuilder: (context, i) {
           if (handledIndices.contains(i) || schedule.periods[i].isEmpty) return const SizedBox.shrink();
-
           String currentSubject = schedule.periods[i];
           String startTime = startTimes[i];
           String endTime = endTimes[i];
 
-          // Logic to merge double periods (e.g., CCNA II)
           if (i + 1 < 10 && schedule.periods[i + 1] == currentSubject) {
             endTime = endTimes[i + 1];
             handledIndices.add(i + 1);
           }
-
           return _buildScheduleItem(startTime, endTime, currentSubject, schedule.faculty);
         },
       ),
@@ -164,11 +152,7 @@ class _StuScheduleState extends State<StuSchedule> {
           padding: const EdgeInsets.symmetric(vertical: 12.0),
           child: Row(
             children: [
-              SizedBox(
-                width: 75,
-                child: Text("$start\n$end",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
-              ),
+              SizedBox(width: 75, child: Text("$start\n$end", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
               const SizedBox(width: 10),
               Container(width: 1.5, height: 40, color: _mainPurple.withOpacity(0.3)),
               const SizedBox(width: 15),
@@ -176,7 +160,7 @@ class _StuScheduleState extends State<StuSchedule> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     Text(faculty, style: const TextStyle(fontSize: 13, color: Colors.black54)),
                   ],
                 ),
@@ -189,26 +173,26 @@ class _StuScheduleState extends State<StuSchedule> {
     );
   }
 
-  // --- Navigation Components Synced with StuHome ---
+  // --- Navigation (Synced Home Button) ---
 
-  Widget _buildFab() {
+  Widget _buildHomeFab() {
     return Container(
       height: 70, width: 70,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: _mainPurple.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
+        BoxShadow(color: _mainPurple.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))
+      ]),
       child: FloatingActionButton(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StudentIDScreen())),
-        elevation: 0,
+        onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
         backgroundColor: Colors.transparent,
+        elevation: 0,
         shape: const CircleBorder(),
         child: Container(
+          width: double.infinity, height: double.infinity,
           decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [_primaryBlue, _mainPurple])
+            shape: BoxShape.circle,
+            gradient: LinearGradient(colors: [_primaryBlue, _mainPurple]),
           ),
-          child: Center(child: Image.asset('assets/images/qr_code.png', width: 30, height: 30, color: Colors.white)),
+          child: const Icon(Icons.home_rounded, color: Colors.white, size: 32),
         ),
       ),
     );
@@ -218,28 +202,27 @@ class _StuScheduleState extends State<StuSchedule> {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 10.0,
-      color: Colors.white,
       height: 80,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
-          _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
+          _navItem('assets/images/solidarity_1.png', "Community", 0),
+          _navItem('assets/images/calendar.png', "Schedule", 1),
           const SizedBox(width: 48),
-          _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
-          _buildNavBarItem('assets/images/user.png', "Profile", 3),
+          _navItem('assets/images/qa.png', "Q&A", 2),
+          _navItem('assets/images/user.png', "Profile", 3),
         ],
       ),
     );
   }
 
-  Widget _buildNavBarItem(String path, String label, int index) {
+  Widget _navItem(String path, String label, int index) {
     bool sel = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        if (index == 1) return; // Already here
-        setState(() => _selectedIndex = index);
-        if (index == 0) Navigator.pop(context); // Go back to Home
+        if (index == 1) return;
+        if (index == 0) Navigator.popUntil(context, (route) => route.isFirst);
+        if (index == 2) Navigator.push(context, MaterialPageRoute(builder: (context) => const QAScreen()));
         if (index == 3) Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
       },
       child: Column(

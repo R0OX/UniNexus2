@@ -28,7 +28,7 @@ void main() async {
     runApp(UniNexusApp(startScreen: WelcomeScreen()));
     // If not remembered, go to Welcome or Login
   }
-
+  runApp(UniNexusApp(startScreen: WelcomeScreen()));
 }
 
 class UniNexusApp extends StatelessWidget {

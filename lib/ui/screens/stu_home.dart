@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'student_id_screen.dart';
-import 'profile_screen.dart'; // Ensure this file exists in your project
+import 'profile_screen.dart';
+import 'stu_schedule.dart'; // Ensure this import is present
 
 class StuHomeScreen extends StatefulWidget {
-  const StuHomeScreen({Key? key}) : super(key: key);
+  const StuHomeScreen({super.key});
 
   @override
   State<StuHomeScreen> createState() => _StuHomeScreenState();
@@ -17,7 +18,6 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
   String _lastName = '';
   bool _isLoading = true;
 
-  // Theme colors consistent with Faculty UI
   final Color _mainPurple = const Color(0xFF7B61FF);
   final Color _primaryBlue = const Color(0xFF237ABA);
 
@@ -74,34 +74,39 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
               children: [
                 _buildTopHeader(),
                 const SizedBox(height: 30),
-
-                // 1. Greeting Card
                 _buildGreetingCard(),
                 const SizedBox(height: 20),
 
-                // 2. Schedule Card (Same 0.4 opacity and Purple Border)
-                _buildWhiteCard(
-                  opacity: 0.4,
-                  borderColor: _mainPurple.withOpacity(0.5),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Want to check your\nschedule?',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.black.withOpacity(0.8),
-                            fontWeight: FontWeight.bold,
+                // Make the Schedule Card clickable
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const StuSchedule()),
+                    );
+                  },
+                  child: _buildWhiteCard(
+                    opacity: 0.4,
+                    borderColor: _mainPurple.withOpacity(0.5),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Want to check your\nschedule?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.black.withOpacity(0.8),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      Image.asset('assets/images/main_calender.png', width: 80, height: 80),
-                    ],
+                        Image.asset('assets/images/main_calender.png', width: 80, height: 80),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // 3. Notifications Area (Fills rest of screen)
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -140,11 +145,7 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
@@ -248,7 +249,7 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
           _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
           const SizedBox(width: 48),
           _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
-          _buildNavBarItem('assets/images/user.png', "Profile", 3), // Index 3 is Profile
+          _buildNavBarItem('assets/images/user.png', "Profile", 3),
         ],
       ),
     );
@@ -259,13 +260,10 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedIndex = index);
-
-        // --- NAVIGATION LOGIC ---
-        if (index == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
-          );
+        if (index == 1) {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const StuSchedule()));
+        } else if (index == 3) {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
         }
       },
       child: Column(
@@ -273,14 +271,7 @@ class _StuHomeScreenState extends State<StuHomeScreen> {
         children: [
           Image.asset(path, width: 24, color: sel ? _mainPurple : Colors.grey),
           const SizedBox(height: 4),
-          Text(
-              label,
-              style: TextStyle(
-                  fontSize: 10,
-                  color: sel ? _mainPurple : Colors.grey,
-                  fontWeight: sel ? FontWeight.bold : FontWeight.normal
-              )
-          ),
+          Text(label, style: TextStyle(fontSize: 10, color: sel ? _mainPurple : Colors.grey, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
         ],
       ),
     );

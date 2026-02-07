@@ -1,0 +1,255 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/firebase/Schedule_service.dart';
+import '../../model/schedule_model.dart';
+import 'student_id_screen.dart';
+import 'profile_screen.dart';
+
+class StuSchedule extends StatefulWidget {
+  const StuSchedule({super.key});
+
+  @override
+  State<StuSchedule> createState() => _StuScheduleState();
+}
+
+class _StuScheduleState extends State<StuSchedule> {
+  int _selectedIndex = 1; // Default to Schedule index
+  final ScheduleService _scheduleService = ScheduleService();
+
+  // Color Palette copied from your StuHome
+  final Color _mainPurple = const Color(0xFF7B61FF);
+  final Color _primaryBlue = const Color(0xFF237ABA);
+  final Color _textIndigo = const Color(0xFF5C5C80);
+
+  final List<String> startTimes = ["9:00 AM", "9:50 AM", "10:50 AM", "11:40 AM", "1:00 PM", "1:50 PM", "2:50 PM", "3:40 PM", "4:30 PM", "5:20 PM"];
+  final List<String> endTimes = ["9:50 AM", "10:40 AM", "11:40 AM", "12:30 PM", "1:50 PM", "2:40 PM", "3:40 PM", "4:30 PM", "5:20 PM", "6:10 PM"];
+
+  Future<ScheduleModel?> _fetchMySchedule() async {
+    final prefs = await SharedPreferences.getInstance();
+    String year = prefs.getString('year') ?? "4";
+    String section = prefs.getString('section') ?? "2";
+    String today = DateFormat('EEEE').format(DateTime.now()).toLowerCase();
+
+    List<ScheduleModel> results = await _scheduleService.getStudentSchedule(
+      year: year, section: section, day: today,
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBody: true,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: _buildFab(),
+      bottomNavigationBar: _buildBottomBar(),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            child: Column(
+              children: [
+                _buildTopHeader(),
+                const SizedBox(height: 30),
+                _buildDateHeaderCard(),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: FutureBuilder<ScheduleModel?>(
+                    future: _fetchMySchedule(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData) {
+                        return Center(child: Text("No schedule found", style: TextStyle(color: _textIndigo, fontWeight: FontWeight.bold)));
+                      }
+                      return _buildSchedulePanel(snapshot.data!);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 100), // Space for bottom bar
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- UI Components Synced with StuHome ---
+
+  Widget _buildTopHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Image.asset('assets/images/menu.png', width: 28, color: _mainPurple),
+        Text("Schedule", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _textIndigo)),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset('assets/images/uni.jpeg', width: 36, height: 36),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateHeaderCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 25),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text("Today's Schedule", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
+          const SizedBox(height: 5),
+          Text(DateFormat('MMMM d, yyyy').format(DateTime.now()),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF5BA4F5), fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSchedulePanel(ScheduleModel schedule) {
+    Set<int> handledIndices = {};
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _mainPurple.withOpacity(0.5), width: 1.5),
+      ),
+      child: ListView.builder(
+        physics: const BouncingScrollPhysics(),
+        itemCount: 10,
+        itemBuilder: (context, i) {
+          if (handledIndices.contains(i) || schedule.periods[i].isEmpty) return const SizedBox.shrink();
+
+          String currentSubject = schedule.periods[i];
+          String startTime = startTimes[i];
+          String endTime = endTimes[i];
+
+          // Logic to merge double periods (e.g., CCNA II)
+          if (i + 1 < 10 && schedule.periods[i + 1] == currentSubject) {
+            endTime = endTimes[i + 1];
+            handledIndices.add(i + 1);
+          }
+
+          return _buildScheduleItem(startTime, endTime, currentSubject, schedule.faculty);
+        },
+      ),
+    );
+  }
+
+  Widget _buildScheduleItem(String start, String end, String subject, String faculty) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 75,
+                child: Text("$start\n$end",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+              ),
+              const SizedBox(width: 10),
+              Container(width: 1.5, height: 40, color: _mainPurple.withOpacity(0.3)),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Text(faculty, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Divider(color: _mainPurple.withOpacity(0.1)),
+      ],
+    );
+  }
+
+  // --- Navigation Components Synced with StuHome ---
+
+  Widget _buildFab() {
+    return Container(
+      height: 70, width: 70,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [BoxShadow(color: _mainPurple.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+      ),
+      child: FloatingActionButton(
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StudentIDScreen())),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        shape: const CircleBorder(),
+        child: Container(
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: [_primaryBlue, _mainPurple])
+          ),
+          child: Center(child: Image.asset('assets/images/qr_code.png', width: 30, height: 30, color: Colors.white)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return BottomAppBar(
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 10.0,
+      color: Colors.white,
+      height: 80,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavBarItem('assets/images/solidarity_1.png', "Community", 0),
+          _buildNavBarItem('assets/images/calendar.png', "Schedule", 1),
+          const SizedBox(width: 48),
+          _buildNavBarItem('assets/images/qa.png', "Q&A", 2),
+          _buildNavBarItem('assets/images/user.png', "Profile", 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavBarItem(String path, String label, int index) {
+    bool sel = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        if (index == 1) return; // Already here
+        setState(() => _selectedIndex = index);
+        if (index == 0) Navigator.pop(context); // Go back to Home
+        if (index == 3) Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(path, width: 24, color: sel ? _mainPurple : Colors.grey),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 10, color: sel ? _mainPurple : Colors.grey, fontWeight: sel ? FontWeight.bold : FontWeight.normal)),
+        ],
+      ),
+    );
+  }
+}
